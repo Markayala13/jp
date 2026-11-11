@@ -33,9 +33,11 @@
 <main>
 
   <!-- HERO: the video plays with the scroll -->
-  <section id="inicio" class="cine" style="--altura: 440vh">
+  <section id="inicio" class="cine">
     <div class="cine-palco">
-      <canvas class="cine-canvas" aria-hidden="true"></canvas>
+      <video class="cine-video" autoplay muted loop playsinline preload="auto" poster="assets/hero-poster.jpg">
+        <source src="assets/hero.mp4" type="video/mp4">
+      </video>
       <div class="cine-vinheta"></div>
 
       <div class="momento" data-de="0" data-ate="0.30">

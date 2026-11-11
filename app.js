@@ -1,119 +1,46 @@
 (() => {
   const S = window.SITE || {};
   const reduzir = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const celular = matchMedia("(max-width: 760px)").matches;
 
-
-  /* ── Rolagem que toca o vídeo ─────────────────────────────────────────── */
+  /* ── Hero: el video se reproduce solo (tiempo normal) y los momentos aparecen con él ── */
   const cine = document.querySelector(".cine");
-  const canvas = cine && cine.querySelector(".cine-canvas");
-  if (cine && canvas && S.frames && S.frames.total) {
-    const ctx = canvas.getContext("2d");
-    const total = S.frames.total;
-    const padrao = celular ? S.frames.mobile : S.frames.desktop;
-    const src = (i) => padrao.replace("{n}", String(i + 1).padStart(4, "0"));
-    const quadros = new Array(total);
+  const video = cine && cine.querySelector(".cine-video");
+  if (cine && video) {
     const momentos = [...cine.querySelectorAll(".momento")];
-    let alvo = 0, atual = 0, desenhado = -1;
+    const dur = () => (video.duration && isFinite(video.duration)) ? video.duration : 8;
 
-    const carregar = (i) => {
-      if (quadros[i]) return quadros[i];
-      const img = new Image();
-      img.decoding = "async";
-      img.src = src(i);
-      img.onload = () => { if (Math.round(atual) === i || desenhado === -1) desenhar(i, true); };
-      return (quadros[i] = img);
-    };
-
-    // Carrega em passadas (1 a cada 8, depois 1 a cada 4…) para cobrir o filme inteiro cedo
-    carregar(0);
-    if (!reduzir) {
-      const fila = [];
-      for (const passo of [8, 4, 2, 1]) for (let i = 0; i < total; i += passo) if (!fila.includes(i)) fila.push(i);
-      let k = 0;
-      const lote = () => { for (let n = 0; n < 6 && k < fila.length; n++) carregar(fila[k++]); if (k < fila.length) setTimeout(lote, 40); };
-      lote();
-    }
-
-    const pronto = (i) => quadros[i] && quadros[i].complete && quadros[i].naturalWidth;
-    const maisProximo = (i) => {
-      for (let d = 0; d < total; d++) {
-        if (pronto(i - d)) return i - d;
-        if (pronto(i + d)) return i + d;
-      }
-      return -1;
-    };
-
-    const ajustar = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(canvas.clientWidth * dpr);
-      canvas.height = Math.round(canvas.clientHeight * dpr);
-      desenhado = -1;
-      desenhar(Math.round(atual), true);
-    };
-
-    function desenhar(i, forcar) {
-      const j = maisProximo(i);
-      if (j < 0 || (j === desenhado && !forcar)) return;
-      const img = quadros[j];
-      const cw = canvas.width, ch = canvas.height;
-      const escala = Math.max(cw / img.naturalWidth, ch / img.naturalHeight); // "cover"
-      const w = img.naturalWidth * escala, h = img.naturalHeight * escala;
-      ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
-      desenhado = j;
-    }
-
-    const progresso = () => {
-      const r = cine.getBoundingClientRect();
-      const curso = cine.offsetHeight - innerHeight;
-      return Math.min(1, Math.max(0, -r.top / (curso || 1)));
-    };
-
-    const atualizarMomentos = (p) => {
+    const atualizar = () => {
+      const p = Math.min(1, Math.max(0, (video.currentTime || 0) / dur()));
       for (const m of momentos) {
         const de = parseFloat(m.dataset.de || 0), ate = parseFloat(m.dataset.ate || 1);
-        m.classList.toggle("ativo", p >= de && (p < ate || (ate >= 1 && p >= 1)));
-      }
-      cine.classList.toggle("andou", p > 0.02);
-    };
-
-    const quadro = () => {
-      alvo = progresso() * (total - 1);
-      atual += (alvo - atual) * 0.18; // suaviza: sensação de filme, não de slide
-      if (Math.abs(alvo - atual) < 0.05) atual = alvo;
-      desenhar(Math.round(atual));
-      atualizarMomentos(atual / (total - 1));
-      requestAnimationFrame(quadro);
-    };
-
-    addEventListener("resize", ajustar);
-    ajustar();
-    if (reduzir) atualizarMomentos(0);
-    else requestAnimationFrame(quadro);
-  }
-
-  /* ── Parallax leve nas artes ──────────────────────────────────────────── */
-  const artes = reduzir ? [] : [...document.querySelectorAll(".arte")];
-  if (artes.length) {
-    const mover = () => {
-      for (const a of artes) {
-        const r = a.parentElement.getBoundingClientRect();
-        if (r.bottom < 0 || r.top > innerHeight) continue;
-        const c = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
-        a.style.transform = `translate3d(0, ${(c * -60).toFixed(1)}px, 0) scale(1.08)`;
+        m.classList.toggle("ativo", p >= de && p <= ate);
       }
     };
-    addEventListener("scroll", () => requestAnimationFrame(mover), { passive: true });
-    mover();
+
+    if (reduzir) {
+      // Sin animación: muestra el primer momento sobre el póster
+      video.removeAttribute("autoplay");
+      try { video.pause(); } catch (e) {}
+      momentos[0] && momentos[0].classList.add("ativo");
+    } else {
+      video.addEventListener("timeupdate", atualizar);
+      const tentarTocar = () => { const r = video.play && video.play(); if (r && r.catch) r.catch(() => {}); };
+      video.addEventListener("canplay", tentarTocar);
+      // Reintenta al primer gesto, por si el navegador bloquea el autoplay
+      addEventListener("pointerdown", tentarTocar, { once: true, passive: true });
+      tentarTocar();
+      atualizar();
+    }
   }
 
-  /* ── Topo, revelar e ano ──────────────────────────────────────────────── */
+  /* ── Topo, botones flotantes, revelar y año ───────────────────────────── */
   const topo = document.querySelector(".topo");
   const whats = document.querySelector(".whats");
   const chamar = document.querySelector(".chamar");
-  let formNaTela = false; // os botões flutuantes se recolhem para não cobrir o "Enviar"
+  let formNaTela = false; // los botones flotantes se recogen para no cubrir el "Send"
   const aoRolar = () => {
     topo && topo.classList.toggle("rolou", scrollY > 40);
+    cine && cine.classList.toggle("andou", scrollY > 40);
     const mostrar = scrollY > innerHeight * 0.6 && !formNaTela;
     whats && whats.classList.toggle("visivel", mostrar);
     chamar && chamar.classList.toggle("visivel", mostrar);
@@ -135,7 +62,7 @@
     whats.href = `https://wa.me/${num}?text=${encodeURIComponent(S.whatsapp.mensagem || "")}`;
   }
 
-  /* ── Formulário → e-mail ──────────────────────────────────────────────── */
+  /* ── Formulario → e-mail ──────────────────────────────────────────────── */
   const form = document.querySelector(".form");
   if (form && S.contato) {
     const status = form.querySelector(".form-status");
@@ -144,18 +71,18 @@
 
     form.addEventListener("submit", async (ev) => {
       ev.preventDefault();
-      if (form.elements._honey.value) return; // robô
+      if (form.elements._honey.value) return; // robot
       let valido = true;
       form.querySelectorAll("[required]").forEach((c) => {
         const ok = c.type === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.value) : c.value.trim().length > 1;
         c.closest(".campo").classList.toggle("erro", !ok);
         if (!ok) valido = false;
       });
-      if (!valido) return avisar("Confira os campos destacados.", "falha");
+      if (!valido) return avisar("Please check the highlighted fields.", "falha");
 
       const dados = Object.fromEntries(new FormData(form));
       delete dados._honey;
-      const assunto = S.contato.assunto || `Novo contato pelo site ${S.nome || ""}`;
+      const assunto = S.contato.assunto || `New message from ${S.nome || ""}`;
       let url, corpo;
       if (S.contato.web3formsChave) {
         url = "https://api.web3forms.com/submit";
@@ -166,7 +93,7 @@
       }
 
       botao.disabled = true;
-      avisar("Enviando…");
+      avisar("Sending…");
       try {
         const r = await fetch(url, {
           method: "POST",
@@ -176,10 +103,10 @@
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.success === false || j.success === "false") throw new Error(j.message || r.status);
         form.reset();
-        avisar("Recebemos seu contato. Em breve falamos com você.", "ok");
+        avisar("Thank you! We received your message and will be in touch soon.", "ok");
       } catch (e) {
-        console.warn("Falha no envio do formulário:", e);
-        avisar("Não foi possível enviar agora. Chame a gente no WhatsApp.", "falha");
+        console.warn("Form submit failed:", e);
+        avisar("Couldn't send right now. Please call or message us on WhatsApp.", "falha");
       } finally {
         botao.disabled = false;
       }
