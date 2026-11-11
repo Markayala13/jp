@@ -50,6 +50,21 @@
   addEventListener("scroll", aoRolar, { passive: true });
   aoRolar();
 
+  /* ── Menú hamburguesa (móvil) ─────────────────────────────────────────── */
+  const hamburguesa = document.querySelector(".hamburguesa");
+  const menu = document.querySelector(".menu");
+  if (hamburguesa && topo) {
+    const alternar = (abrir) => {
+      const open = abrir === undefined ? !topo.classList.contains("menu-aberto") : abrir;
+      topo.classList.toggle("menu-aberto", open);
+      hamburguesa.setAttribute("aria-expanded", open ? "true" : "false");
+      document.documentElement.classList.toggle("menu-travado", open);
+    };
+    hamburguesa.addEventListener("click", () => alternar());
+    menu && menu.querySelectorAll("a").forEach((a) => a.addEventListener("click", () => alternar(false)));
+    addEventListener("keydown", (e) => { if (e.key === "Escape") alternar(false); });
+  }
+
   const io = new IntersectionObserver((es) => es.forEach((e) => {
     if (e.isIntersecting) { e.target.classList.add("visto"); io.unobserve(e.target); }
   }), { threshold: 0.18 });

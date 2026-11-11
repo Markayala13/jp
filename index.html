@@ -12,8 +12,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;500;700;900&family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="assets/frames/desktop/f_0001.webp">
+  <link rel="preload" as="image" href="assets/hero-poster.jpg">
   <link rel="stylesheet" href="estilo.css">
+  <script>
+    // Cada recarga empieza en el hero: sin restaurar scroll y sin saltar a un #ancla
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  </script>
 </head>
 <body>
 
@@ -21,13 +26,22 @@
   <a href="#inicio" class="marca" aria-label="WORK JP">
     <img src="assets/logo.png" alt="WORK JP" class="marca-logo">
   </a>
-  <nav class="menu" aria-label="Sections">
+  <nav class="menu" id="menu-principal" aria-label="Sections">
     <a href="#about">About</a>
+    <a href="#why">Why Us</a>
     <a href="#services">Services</a>
     <a href="#work">Our Work</a>
-    <a href="#why">Why Us</a>
+    <a href="#testimonials">Reviews</a>
+    <a href="#contact" class="solo-movil">Contact</a>
     <a href="#contact" class="menu-cta">Get an Estimate</a>
+    <div class="menu-contacto">
+      <a href="tel:+16784975337">(678) 497-5337</a>
+      <span>Serving Georgia, USA</span>
+    </div>
   </nav>
+  <button class="hamburguesa" aria-label="Open menu" aria-expanded="false" aria-controls="menu-principal">
+    <span></span><span></span><span></span>
+  </button>
 </header>
 
 <main>
